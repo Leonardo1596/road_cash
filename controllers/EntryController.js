@@ -229,6 +229,8 @@ const getResumeByPeriod = async (req, res) => {
       date: { $gte: from, $lte: to }
     });
 
+    console.log(entries);
+
     // Calcular totais
     const resume = entries.reduce((acc, entry) => {
       acc.grossGain += entry.grossGain || 0;
@@ -237,6 +239,7 @@ const getResumeByPeriod = async (req, res) => {
       acc.totalDistance += entry.distance || 0;
       acc.foodExpense += entry.foodExpense || 0;
       acc.otherExpense += entry.otherExpense || 0;
+      acc.gasolineExpense += entry.gasolineExpense || 0;
       acc.count += 1;
       return acc;
     }, {
@@ -246,6 +249,7 @@ const getResumeByPeriod = async (req, res) => {
       totalDistance: 0,
       foodExpense: 0,
       otherExpense: 0,
+      gasolineExpense: 0,
       count: 0
     });
 
