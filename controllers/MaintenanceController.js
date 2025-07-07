@@ -15,6 +15,7 @@ const getMaintenanceExpense = async (req, res) => {
         });
 
         const totalDistance = entries.reduce((sum, entry) => sum + (entry.distance || 0), 0);
+        const totalGasoline = entries.reduce((sum, entry) => sum + (entry.gasolineExpense || 0), 0);
 
         const costData = await CostPerKm.findOne({ userId });
 
@@ -48,7 +49,7 @@ const getMaintenanceExpense = async (req, res) => {
             relacao: calculateItemExpense('relacao'),
             pneuDianteiro: calculateItemExpense('pneuDianteiro'),
             pneuTraseiro: calculateItemExpense('pneuTraseiro'),
-            gasolina: calculateItemExpense('gasolina'),
+            gasolina: totalGasoline,
             totalDistance
         };
 
