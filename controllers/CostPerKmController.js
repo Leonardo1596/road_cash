@@ -56,7 +56,7 @@ const updateCostPerKm = async (req, res) => {
 
 const getCostPerKm = async (req, res) => {
     try {
-        CostPerKm.findOne({ _id: req.params.id })
+        CostPerKm.findOne({ userId: req.params.userId })
         .then(async cost => {
             res.json(cost);
         })

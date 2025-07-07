@@ -12,10 +12,12 @@ app.use(cors());
 // Import routes
 const routeAuth = require('./routes/auth');
 const routeEntries = require('./routes/entries');
+const routeCostPerKm  = require('./routes/costPerKm');
 
 // Routes
 app.use(routeAuth);
 app.use(routeEntries);
+app.use(routeCostPerKm);
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI,)
