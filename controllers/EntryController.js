@@ -201,64 +201,69 @@ const updateEntry = async (req, res) => {
 
 const getEntryByUser = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const { userId, from, to } = req.query;
 
-        Entry.find({ userId })
-            .then(entries => {
-                res.json(entries);
-            })
-            .catch(error => {
-                console.error('Ocorreu um erro ao recuperar os lançamentos.', error);
-            });
+        // Montar o filtro básico com userId
+        const filter = { userId };
+
+        // Se ambos from e to forem fornecidos, adicionar filtro por data
+        if (from && to) {
+            filter.date = { $gte: from, $lte: to };
+        }
+
+        const entries = await Entry.find(filter);
+        res.json(entries);
+
     } catch (error) {
-
+        console.error('Ocorreu um erro ao recuperar os lançamentos.', error);
+        res.status(500).json({ error: 'Erro ao recuperar os lançamentos.' });
     }
-}
+};
 
 const getResumeByPeriod = async (req, res) => {
-  try {
-    const { userId, from, to } = req.query;
+    try {
+        const { userId, from, to } = req.query;
 
-    if (!userId || !from || !to) {
-      return res.status(400).json({ error: 'userId, from e to são obrigatórios' });
+        if (!userId || !from || !to) {
+            return res.status(400).json({ error: 'userId, from e to são obrigatórios' });
+        }
+
+        // Buscar lançamentos do período
+        const entries = await Entry.find({
+            userId,
+            date: { $gte: from, $lte: to }
+        });
+
+        console.log(entries);
+
+        // Calcular totais
+        const resume = entries.reduce((acc, entry) => {
+            acc.grossGain += entry.grossGain || 0;
+            acc.liquidGain += entry.liquidGain || 0;
+            acc.totalSpent += entry.spent || 0;
+            acc.totalDistance += entry.distance || 0;
+            acc.foodExpense += entry.foodExpense || 0;
+            acc.otherExpense += entry.otherExpense || 0;
+            acc.gasolineExpense += entry.gasolineExpense || 0;
+            acc.count += 1;
+            return acc;
+        }, {
+            grossGain: 0,
+            liquidGain: 0,
+            totalSpent: 0,
+            totalDistance: 0,
+            foodExpense: 0,
+            otherExpense: 0,
+            gasolineExpense: 0,
+            count: 0
+        });
+
+        res.json(resume);
+
+    } catch (error) {
+        console.error('Erro ao obter resumo:', error);
+        res.status(500).json({ error: 'Erro ao obter resumo do período' });
     }
-
-    // Buscar lançamentos do período
-    const entries = await Entry.find({
-      userId,
-      date: { $gte: from, $lte: to }
-    });
-
-    console.log(entries);
-
-    // Calcular totais
-    const resume = entries.reduce((acc, entry) => {
-      acc.grossGain += entry.grossGain || 0;
-      acc.liquidGain += entry.liquidGain || 0;
-      acc.totalSpent += entry.spent || 0;
-      acc.totalDistance += entry.distance || 0;
-      acc.foodExpense += entry.foodExpense || 0;
-      acc.otherExpense += entry.otherExpense || 0;
-      acc.gasolineExpense += entry.gasolineExpense || 0;
-      acc.count += 1;
-      return acc;
-    }, {
-      grossGain: 0,
-      liquidGain: 0,
-      totalSpent: 0,
-      totalDistance: 0,
-      foodExpense: 0,
-      otherExpense: 0,
-      gasolineExpense: 0,
-      count: 0
-    });
-
-    res.json(resume);
-
-  } catch (error) {
-    console.error('Erro ao obter resumo:', error);
-    res.status(500).json({ error: 'Erro ao obter resumo do período' });
-  }
 };
 
 module.exports = {
