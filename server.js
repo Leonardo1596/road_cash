@@ -12,14 +12,18 @@ app.use(cors());
 // Import routes
 const routeAuth = require('./routes/auth');
 const routeEntries = require('./routes/entries');
+const routePersonalEntries = require('./routes/personalEntries');
 const routeCostPerKm  = require('./routes/costPerKm');
 const routeMaintenance = require('./routes/maintenance');
+const routePeronalMaintenance = require('./routes/personalMaintenance');
 
 // Routes
 app.use(routeAuth);
 app.use(routeEntries);
+app.use(routePersonalEntries);
 app.use(routeCostPerKm);
 app.use(routeMaintenance);
+app.use(routePeronalMaintenance);
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI,)
