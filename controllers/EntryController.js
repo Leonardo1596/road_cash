@@ -10,6 +10,7 @@ const createEntry = async (req, res) => {
             initialKm,
             finalKm,
             grossGain,
+            timeWorked,
             foodExpense,
             otherExpense,
         } = req.body;
@@ -41,8 +42,10 @@ const createEntry = async (req, res) => {
         }
         const totalCostPerKm = calcTotalCostPerKm(costData);
 
+        const hourlyGain = (grossGain / timeWorked) * 60;
         const spent = (totalCostPerKm * distance) + foodExpense + otherExpense;
         const liquidGain = grossGain - spent;
+        const hourlyLiquidGain = (liquidGain / timeWorked) * 60;
         const percentageSpent = grossGain !== 0 ? ((spent / grossGain) * 100) : 100;
         const gasolinePrice = costData.gasolina.value;
         const gasolineExpense = (costData.gasolina.value / costData.gasolina.km) * distance;
@@ -62,7 +65,10 @@ const createEntry = async (req, res) => {
             finalKm,
             distance,
             grossGain,
+            timeWorked,
+            hourlyGain,
             liquidGain,
+            hourlyLiquidGain,
             spent,
             percentageSpent,
             foodExpense,

@@ -29,9 +29,21 @@ const EntriesSchema = mongoose.Schema({
         type: Number,
         required: true
     },
+    timeWorked: {
+        type: Number,
+        default: 0,
+    },
+    hourlyGain: {
+        type: Number,
+        default: 0,
+    },
     liquidGain: {
         type: Number,
         required: true
+    },
+    hourlyLiquidGain: {
+        type: Number,
+        default: 0
     },
     spent: {
         type: Number,
