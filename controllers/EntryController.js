@@ -166,10 +166,10 @@ const updateEntry = async (req, res) => {
             ? Number(((gasolinePrice / costData.gasolina.km) * distance).toFixed(2))
             : 0;
 
-        const hourlyGain = Number((updatedGrossGain / updatedTimeWorked).toFixed(2));
+        const hourlyGain = Number(((updatedGrossGain / updatedTimeWorked) * 60).toFixed(2));
         const spent = Number(((totalCostPerKm * distance) + updatedFoodExpense + updatedOtherExpense).toFixed(2));
         const liquidGain = Number((updatedGrossGain - spent).toFixed(2));
-        const hourlyLiquidGain = Number((liquidGain / updatedTimeWorked).toFixed(2));
+        const hourlyLiquidGain = Number(((liquidGain / updatedTimeWorked) * 60).toFixed(2));
         const percentageSpent = updatedGrossGain !== 0 ? Number(((spent / updatedGrossGain) * 100).toFixed(2)) : 100;
 
         // Calcular o dia da semana
