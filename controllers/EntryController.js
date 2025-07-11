@@ -120,6 +120,7 @@ const updateEntry = async (req, res) => {
             initialKm,
             finalKm,
             grossGain,
+            timeWorked,
             foodExpense,
             otherExpense,
         } = req.body;
@@ -129,6 +130,7 @@ const updateEntry = async (req, res) => {
         const updatedInitialKm = initialKm ?? entry.initialKm;
         const updatedFinalKm = finalKm ?? entry.finalKm;
         const updatedGrossGain = grossGain ?? entry.grossGain;
+        const updatedTimeWorked = timeWorked ?? entry.timeWorked;
         const updatedFoodExpense = foodExpense ?? entry.foodExpense;
         const updatedOtherExpense = otherExpense ?? entry.otherExpense;
 
@@ -164,8 +166,10 @@ const updateEntry = async (req, res) => {
             ? Number(((gasolinePrice / costData.gasolina.km) * distance).toFixed(2))
             : 0;
 
+        const hourlyGain = Number((updatedGrossGain / updatedTimeWorked).toFixed(2));
         const spent = Number(((totalCostPerKm * distance) + updatedFoodExpense + updatedOtherExpense).toFixed(2));
         const liquidGain = Number((updatedGrossGain - spent).toFixed(2));
+        const hourlyLiquidGain = Number((liquidGain / updatedTimeWorked).toFixed(2));
         const percentageSpent = updatedGrossGain !== 0 ? Number(((spent / updatedGrossGain) * 100).toFixed(2)) : 100;
 
         // Calcular o dia da semana
@@ -184,10 +188,13 @@ const updateEntry = async (req, res) => {
                 finalKm: updatedFinalKm,
                 distance,
                 grossGain: updatedGrossGain,
+                timeWorked: updatedTimeWorked,
+                hourlyGain,
                 foodExpense: updatedFoodExpense,
                 otherExpense: updatedOtherExpense,
                 spent,
                 liquidGain,
+                hourlyLiquidGain,
                 percentageSpent,
                 costPerKm: totalCostPerKm,
                 gasolinePrice,
