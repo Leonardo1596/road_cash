@@ -25,6 +25,10 @@ app.use(routeCostPerKm);
 app.use(routeMaintenance);
 app.use(routePeronalMaintenance);
 
+app.get('/', (req, res) => {
+  res.send('🚀 API está ativa!');
+});
+
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI,)
     .then(() => {
