@@ -255,6 +255,7 @@ const getResumeByPeriod = async (req, res) => {
             acc.liquidGain += entry.liquidGain || 0;
             acc.totalSpent += entry.spent || 0;
             acc.totalDistance += entry.distance || 0;
+            acc.timeWorked += entry.timeWorked || 0;
             acc.foodExpense += entry.foodExpense || 0;
             acc.otherExpense += entry.otherExpense || 0;
             acc.gasolineExpense += entry.gasolineExpense || 0;
@@ -265,12 +266,17 @@ const getResumeByPeriod = async (req, res) => {
             liquidGain: 0,
             totalSpent: 0,
             totalDistance: 0,
+            timeWorked: 0,
             foodExpense: 0,
             otherExpense: 0,
             gasolineExpense: 0,
             count: 0
         });
 
+        const hour = Math.floor(resume.timeWorked / 60);
+        const minute = resume.timeWorked % 60;
+
+        resume.timeWorked = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
         res.json(resume);
 
     } catch (error) {
