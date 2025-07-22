@@ -1,96 +1,147 @@
 const mongoose = require('mongoose');
-const Entry = require('../models/EntriesSchema');
+// const Entry = require('../models/EntriesSchema');
 const CostPerKm = require('../models/CostPerKmSchema');
+const { Entry, Expense, Record } = require('../models/recordSchema'); // Importa o Entry do novo schema
 
-const createEntry = async (req, res) => {
+// Main function
+const createRecord = async (req, res) => {
     try {
-        const {
-            userId,
-            date,
-            initialKm,
-            finalKm,
-            grossGain,
-            timeWorked,
-            foodExpense,
-            otherExpense,
-        } = req.body;
+        const { type } = req.body;
 
-        const distance = finalKm - initialKm;
-
-        // Get cost per km
-        const costData = await CostPerKm.findOne({ userId });
-
-        if (!costData) {
-            return res.status(404).json({ error: 'Custo por km não encontrado para este usuário.' });
+        if (!type || (type !== 'entry' && type !== 'expense')) {
+            return res.status(400).json({ error: 'Tipo inválido. Use "entry" ou "expense".' });
         }
 
-        // Calculate total cost per km
-        function calcTotalCostPerKm(costData) {
-            const items = ['oleo', 'relacao', 'pneuDianteiro', 'pneuTraseiro', 'gasolina'];
-            let total = 0;
-
-            items.forEach(item => {
-                const km = costData[item].km;
-                const value = costData[item].value;
-
-                if (km && km > 0) {
-                    total += value / km;
-                }
-            });
-
-            return Number(total.toFixed(4));
+        if (type === 'entry') {
+            return await createEntryLogic(req, res);
         }
-        const totalCostPerKm = calcTotalCostPerKm(costData);
 
-        const hourlyGain = (grossGain / timeWorked) * 60;
-        const spent = (totalCostPerKm * distance) + foodExpense + otherExpense;
-        const liquidGain = grossGain - spent;
-        const hourlyLiquidGain = (liquidGain / timeWorked) * 60;
-        const percentageSpent = grossGain !== 0 ? ((spent / grossGain) * 100) : 100;
-        const gasolinePrice = costData.gasolina.value;
-        const gasolineExpense = (costData.gasolina.value / costData.gasolina.km) * distance;
+        if (type === 'expense') {
+            return await createExpenseLogic(req, res);
+        }
 
-
-        const [year, month, day] = date.split('-').map(Number);
-        const dateObj = new Date(year, month - 1, day); // mês começa em 0
-        const weekDays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-        const weekDay = weekDays[dateObj.getDay()];
-
-
-        const newEntry = new Entry({
-            userId,
-            date,
-            weekDay,
-            initialKm,
-            finalKm,
-            distance,
-            grossGain,
-            timeWorked,
-            hourlyGain,
-            liquidGain,
-            hourlyLiquidGain,
-            spent,
-            percentageSpent,
-            foodExpense,
-            otherExpense,
-            costPerKm: totalCostPerKm,
-            gasolinePrice,
-            gasolineExpense
-        });
-        const savedEntry = await newEntry.save();
-
-        res.json(savedEntry);
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ error: 'Ocorrreu um erro ao criar o lançamento.' });
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao criar registro.' });
     }
 };
+
+// Logic to create ENTRY
+async function createEntryLogic(req, res) {
+    const {
+        userId,
+        date,
+        initialKm,
+        finalKm,
+        grossGain,
+        timeWorked,
+    } = req.body;
+
+    if (!userId || !date || initialKm == null || finalKm == null || grossGain == null || timeWorked == null) {
+        return res.status(400).json({ error: 'Campos obrigatórios para entry não foram preenchidos.' });
+    }
+
+    const distance = finalKm - initialKm;
+
+    // Search for the user's cost per km
+    const costData = await CostPerKm.findOne({ userId });
+    if (!costData) {
+        return res.status(404).json({ error: 'Custo por km não encontrado para este usuário.' });
+    }
+
+    // Function to calculate the total cost per km
+    const calcTotalCostPerKm = (costData) => {
+        const items = ['oleo', 'relacao', 'pneuDianteiro', 'pneuTraseiro', 'gasolina'];
+        let total = 0;
+
+        items.forEach(item => {
+            const km = costData[item].km;
+            const value = costData[item].value;
+
+            if (km && km > 0) {
+                total += value / km;
+            }
+        });
+
+        return Number(total.toFixed(4));
+    };
+
+    const totalCostPerKm = calcTotalCostPerKm(costData);
+
+    // Calcs
+    const hourlyGain = (grossGain / timeWorked) * 60;
+    const spent = totalCostPerKm * distance;
+    const liquidGain = grossGain - spent;
+    const hourlyLiquidGain = (liquidGain / timeWorked) * 60;
+    const percentageSpent = grossGain !== 0 ? ((spent / grossGain) * 100) : 100;
+    const gasolinePrice = costData.gasolina.value;
+    const gasolineExpense = (costData.gasolina.value / costData.gasolina.km) * distance;
+
+    // Find out the day of the week
+    const weekDay = getWeekDay(date);
+
+    // Create entry
+    const newEntry = new Entry({
+        type: 'entry',
+        userId,
+        date,
+        weekDay,
+        initialKm,
+        finalKm,
+        distance,
+        grossGain,
+        timeWorked,
+        hourlyGain,
+        liquidGain,
+        hourlyLiquidGain,
+        spent,
+        percentageSpent,
+        costPerKm: totalCostPerKm,
+        gasolinePrice,
+        gasolineExpense
+    });
+
+    const savedEntry = await newEntry.save();
+    return res.json(savedEntry);
+}
+
+// Logic for creating EXPENSE
+async function createExpenseLogic(req, res) {
+    const { userId, date, description, price, category } = req.body;
+
+    if (!userId || !date || !description || price == null) {
+        return res.status(400).json({ error: 'Campos obrigatórios para expense não foram preenchidos.' });
+    }
+
+    const weekDay = getWeekDay(date);
+
+    const newExpense = new Expense({
+        type: 'expense',
+        userId,
+        date,
+        weekDay,
+        description,
+        price,
+        category
+    });
+
+    const savedExpense = await newExpense.save();
+    return res.json(savedExpense);
+}
+
+// Auxiliary function to get the day of the week
+function getWeekDay(date) {
+    const [year, month, day] = date.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    const weekDays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+    return weekDays[dateObj.getDay()];
+}
 
 const deleteEntry = async (req, res) => {
     try {
         const { userId, entryId } = req.params;
 
-        const deletedEntry = await Entry.findOneAndDelete({
+        const deletedEntry = await Record.findOneAndDelete({
             userId,
             _id: entryId
         });
@@ -103,116 +154,81 @@ const deleteEntry = async (req, res) => {
     }
 };
 
-
-const updateEntry = async (req, res) => {
+const updateRecord = async (req, res) => {
     try {
-        const { entryId } = req.params;
+        const { recordId } = req.params;
+        const record = await Record.findById(recordId);
 
-        // Buscar o lançamento original
-        const entry = await Entry.findById(entryId);
-        if (!entry) {
-            return res.status(404).json({ error: 'Lançamento não encontrado' });
+        if (!record) {
+            return res.status(404).json({ error: "Registro não encontrado" });
         }
 
-        // Extrair os campos do body (podem vir todos ou apenas alguns)
-        const {
-            date,
-            initialKm,
-            finalKm,
-            grossGain,
-            timeWorked,
-            foodExpense,
-            otherExpense,
-        } = req.body;
+        const { type } = record;
+        const body = req.body;
 
-        // Usar valores antigos se não vierem no body
-        const updatedDate = date || entry.date;
-        const updatedInitialKm = initialKm ?? entry.initialKm;
-        const updatedFinalKm = finalKm ?? entry.finalKm;
-        const updatedGrossGain = grossGain ?? entry.grossGain;
-        const updatedTimeWorked = timeWorked ?? entry.timeWorked;
-        const updatedFoodExpense = foodExpense ?? entry.foodExpense;
-        const updatedOtherExpense = otherExpense ?? entry.otherExpense;
+        if (type === "expense") {
+            record.date = body.date || record.date;
+            record.weekDay = body.date ? getWeekDay(body.date) : record.weekDay;
+            record.description = body.description ?? record.description;
+            record.price = body.price ?? record.price;
+            record.updatedAt = new Date();
 
-        const distance = updatedFinalKm - updatedInitialKm;
+            const updatedExpense = await record.save();
+            return res.json(updatedExpense);
+        }
 
-        // Buscar costPerKm do usuário
-        const costData = await CostPerKm.findOne({ userId: entry.userId });
+        // If it is entry
+        record.date = body.date || record.date;
+        record.initialKm = body.initialKm ?? record.initialKm;
+        record.finalKm = body.finalKm ?? record.finalKm;
+        record.grossGain = body.grossGain ?? record.grossGain;
+        record.timeWorked = body.timeWorked ?? record.timeWorked;
+
+        const distance = record.finalKm - record.initialKm;
+
+        const costData = await CostPerKm.findOne({ userId: record.userId });
         if (!costData) {
             return res.status(404).json({ error: 'Custo por km não encontrado para este usuário.' });
         }
 
-        // Calcular custo total por km
-        function calcTotalCostPerKm(costData) {
+        const calcTotalCostPerKm = (costData) => {
             const items = ['oleo', 'relacao', 'pneuDianteiro', 'pneuTraseiro', 'gasolina'];
-            let total = 0;
-
-            items.forEach(item => {
+            return items.reduce((total, item) => {
                 const km = costData[item].km;
                 const value = costData[item].value;
+                return km > 0 ? total + value / km : total;
+            }, 0);
+        };
 
-                if (km && km > 0) {
-                    total += value / km;
-                }
-            });
+        const totalCostPerKm = Number(calcTotalCostPerKm(costData).toFixed(4));
 
-            return Number(total.toFixed(4));
-        }
-
-        const totalCostPerKm = calcTotalCostPerKm(costData);
-
-        const gasolinePrice = costData.gasolina.value;
-        const gasolineExpense = (costData.gasolina.km > 0)
-            ? Number(((gasolinePrice / costData.gasolina.km) * distance).toFixed(2))
+        record.weekDay = getWeekDay(record.date);
+        record.distance = distance;
+        record.hourlyGain = Number(((record.grossGain / record.timeWorked) * 60).toFixed(2));
+        record.spent = Number((totalCostPerKm * distance).toFixed(2));
+        record.liquidGain = Number((record.grossGain - record.spent).toFixed(2));
+        record.hourlyLiquidGain = Number(((record.liquidGain / record.timeWorked) * 60).toFixed(2));
+        record.percentageSpent = record.grossGain !== 0
+            ? Number(((record.spent / record.grossGain) * 100).toFixed(2))
+            : 100;
+        record.costPerKm = totalCostPerKm;
+        record.gasolinePrice = costData.gasolina.value;
+        record.gasolineExpense = (costData.gasolina.km > 0)
+            ? Number(((costData.gasolina.value / costData.gasolina.km) * distance).toFixed(2))
             : 0;
+        record.updatedAt = new Date();
 
-        const hourlyGain = Number(((updatedGrossGain / updatedTimeWorked) * 60).toFixed(2));
-        const spent = Number(((totalCostPerKm * distance) + updatedFoodExpense + updatedOtherExpense).toFixed(2));
-        const liquidGain = Number((updatedGrossGain - spent).toFixed(2));
-        const hourlyLiquidGain = Number(((liquidGain / updatedTimeWorked) * 60).toFixed(2));
-        const percentageSpent = updatedGrossGain !== 0 ? Number(((spent / updatedGrossGain) * 100).toFixed(2)) : 100;
-
-        // Calcular o dia da semana
-        const [year, month, day] = updatedDate.split('-').map(Number);
-        const dateObj = new Date(year, month - 1, day);
-        const weekDays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-        const weekDay = weekDays[dateObj.getDay()];
-
-        // Atualizar o lançamento
-        const updatedEntry = await Entry.findByIdAndUpdate(
-            entryId,
-            {
-                date: updatedDate,
-                weekDay,
-                initialKm: updatedInitialKm,
-                finalKm: updatedFinalKm,
-                distance,
-                grossGain: updatedGrossGain,
-                timeWorked: updatedTimeWorked,
-                hourlyGain,
-                foodExpense: updatedFoodExpense,
-                otherExpense: updatedOtherExpense,
-                spent,
-                liquidGain,
-                hourlyLiquidGain,
-                percentageSpent,
-                costPerKm: totalCostPerKm,
-                gasolinePrice,
-                gasolineExpense,
-                updatedAt: new Date()
-            },
-            { new: true }
-        );
-
+        const updatedEntry = await record.save();
         res.json(updatedEntry);
 
     } catch (error) {
-        console.error('Erro ao atualizar o lançamento:', error);
-        res.status(500).json({ error: 'Erro ao atualizar o lançamento.' });
+        console.error('Erro ao atualizar o registro:', error);
+        res.status(500).json({ error: 'Erro ao atualizar o registro.' });
     }
 };
 
-const getEntryByUser = async (req, res) => {
+
+const getRecordsByUser = async (req, res) => {
     try {
         const { userId, from, to } = req.query;
 
@@ -224,7 +240,7 @@ const getEntryByUser = async (req, res) => {
             filter.date = { $gte: from, $lte: to };
         }
 
-        const entries = await Entry.find(filter);
+        const entries = await Record.find(filter);
         res.json(entries);
 
     } catch (error) {
@@ -256,8 +272,8 @@ const getResumeByPeriod = async (req, res) => {
             acc.totalSpent += entry.spent || 0;
             acc.totalDistance += entry.distance || 0;
             acc.timeWorked += entry.timeWorked || 0;
-            acc.foodExpense += entry.foodExpense || 0;
-            acc.otherExpense += entry.otherExpense || 0;
+            // acc.foodExpense += entry.foodExpense || 0;
+            // acc.otherExpense += entry.otherExpense || 0;
             acc.gasolineExpense += entry.gasolineExpense || 0;
             acc.count += 1;
             return acc;
@@ -286,9 +302,9 @@ const getResumeByPeriod = async (req, res) => {
 };
 
 module.exports = {
-    createEntry,
+    createRecord,
     deleteEntry,
-    updateEntry,
-    getEntryByUser,
+    updateRecord,
+    getRecordsByUser,
     getResumeByPeriod
 }

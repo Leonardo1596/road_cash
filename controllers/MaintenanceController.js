@@ -1,5 +1,5 @@
 const CostPerKm = require('../models/CostPerKmSchema');
-const Entry = require('../models/EntriesSchema');
+const { Entry } = require('../models/recordSchema');
 
 const getMaintenanceExpense = async (req, res) => {
     try {
