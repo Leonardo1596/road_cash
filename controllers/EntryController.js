@@ -301,10 +301,54 @@ const getResumeByPeriod = async (req, res) => {
     }
 };
 
+const getEntriesByUser = async (req, res) => {
+    try {
+        const { userId, from, to } = req.query;
+
+        // Montar o filtro básico com userId
+        const filter = { userId };
+
+        // Se ambos from e to forem fornecidos, adicionar filtro por data
+        if (from && to) {
+            filter.date = { $gte: from, $lte: to };
+        }
+
+        const entries = await Entry.find(filter);
+        res.json(entries);
+
+    } catch (error) {
+        console.error('Ocorreu um erro ao recuperar os lançamentos.', error);
+        res.status(500).json({ error: 'Erro ao recuperar os lançamentos.' });
+    }
+};
+
+const getExpensesByUser = async (req, res) => {
+    try {
+        const { userId, from, to } = req.query;
+
+        // Montar o filtro básico com userId
+        const filter = { userId };
+
+        // Se ambos from e to forem fornecidos, adicionar filtro por data
+        if (from && to) {
+            filter.date = { $gte: from, $lte: to };
+        }
+
+        const entries = await Expense.find(filter);
+        res.json(entries);
+
+    } catch (error) {
+        console.error('Ocorreu um erro ao recuperar os lançamentos.', error);
+        res.status(500).json({ error: 'Erro ao recuperar os lançamentos.' });
+    }
+};
+
 module.exports = {
     createRecord,
     deleteEntry,
     updateRecord,
     getRecordsByUser,
-    getResumeByPeriod
+    getResumeByPeriod,
+    getEntriesByUser,
+    getExpensesByUser
 }
