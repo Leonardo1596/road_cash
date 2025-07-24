@@ -275,7 +275,7 @@ const getResumeByPeriod = async (req, res) => {
         });
 
         const totalFoodExpense = expenses.reduce((acc, item) => {
-            if (item.category === 'food') {
+            if (item.category === 'alimentacao') {
                 acc += item.price || 0;
             }
             return acc;
