@@ -306,6 +306,7 @@ const getResumeByPeriod = async (req, res) => {
             count: 0
         });
 
+        resume.liquidGain = resume.grossGain - resume.totalSpent;
         resume.otherExpenseMinusFood = resume.otherExpense - resume.foodExpense;
 
         const hour = Math.floor(resume.timeWorked / 60);
