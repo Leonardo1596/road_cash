@@ -283,11 +283,10 @@ const getResumeByPeriod = async (req, res) => {
 
         // Calcular totais
         const resume = records.reduce((acc, entry) => {
-            console.log(entry.spent - entry.gasolineExpense);
             acc.grossGain += entry.grossGain || 0;
             acc.liquidGain += entry.liquidGain || 0;
             acc.totalSpent += (entry.spent || 0) + (entry.price || 0);
-            acc.oherExpense += entry.price || 0;
+            acc.otherExpense += entry.price || 0;
             acc.totalDistance += entry.distance || 0;
             acc.timeWorked += entry.timeWorked || 0;
             acc.maintenanceExpense += (entry.spent - entry.gasolineExpense) || 0;
@@ -298,7 +297,7 @@ const getResumeByPeriod = async (req, res) => {
             grossGain: 0,
             liquidGain: 0,
             totalSpent: 0,
-            oherExpense: 0,
+            otherExpense: 0,
             totalDistance: 0,
             timeWorked: 0,
             foodExpense: totalFoodExpense,
@@ -306,6 +305,8 @@ const getResumeByPeriod = async (req, res) => {
             gasolineExpense: 0,
             count: 0
         });
+
+        resume.otherExpenseMinusFood = resume.otherExpense - resume.foodExpense;
 
         const hour = Math.floor(resume.timeWorked / 60);
         const minute = resume.timeWorked % 60;
