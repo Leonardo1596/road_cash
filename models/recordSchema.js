@@ -102,8 +102,8 @@ const ExpenseSchema = new mongoose.Schema({
     },
     category: { 
         type: String, 
-        enum: ['food', 'maintenance', 'other'],
-        default: 'other'
+        enum: ['alimentacao', 'manutencao', 'outro'],
+        default: 'outro'
     },
 });
 
