@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-// const Entry = require('../models/EntriesSchema');
 const CostPerKm = require('../models/CostPerKmSchema');
 const { Entry, Expense, Record } = require('../models/recordSchema'); // Importa o Entry do novo schema
 
@@ -100,6 +99,7 @@ async function createEntryLogic(req, res) {
         gasolinePrice,
         gasolineExpense
     });
+    console.log(newEntry);
 
     const savedEntry = await newEntry.save();
     return res.json(savedEntry);
@@ -263,17 +263,34 @@ const getResumeByPeriod = async (req, res) => {
             date: { $gte: from, $lte: to }
         });
 
-        console.log(entries);
+        // Buscar despesas do período
+        const expenses = await Expense.find({
+            userId,
+            date: { $gte: from, $lte: to }
+        });
+
+        const records = await Record.find({
+            userId,
+            date: { $gte: from, $lte: to }
+        });
+
+        const totalFoodExpense = expenses.reduce((acc, item) => {
+            if (item.category === 'food') {
+                acc += item.price || 0;
+            }
+            return acc;
+        }, 0);
 
         // Calcular totais
-        const resume = entries.reduce((acc, entry) => {
+        const resume = records.reduce((acc, entry) => {
+            console.log(entry.spent - entry.gasolineExpense);
             acc.grossGain += entry.grossGain || 0;
             acc.liquidGain += entry.liquidGain || 0;
-            acc.totalSpent += entry.spent || 0;
+            acc.totalSpent += (entry.spent || 0) + (entry.price || 0);
+            acc.oherExpense += entry.price || 0;
             acc.totalDistance += entry.distance || 0;
             acc.timeWorked += entry.timeWorked || 0;
-            // acc.foodExpense += entry.foodExpense || 0;
-            // acc.otherExpense += entry.otherExpense || 0;
+            acc.maintenanceExpense += (entry.spent - entry.gasolineExpense) || 0;
             acc.gasolineExpense += entry.gasolineExpense || 0;
             acc.count += 1;
             return acc;
@@ -281,10 +298,11 @@ const getResumeByPeriod = async (req, res) => {
             grossGain: 0,
             liquidGain: 0,
             totalSpent: 0,
+            oherExpense: 0,
             totalDistance: 0,
             timeWorked: 0,
-            foodExpense: 0,
-            otherExpense: 0,
+            foodExpense: totalFoodExpense,
+            maintenanceExpense: 0,
             gasolineExpense: 0,
             count: 0
         });
